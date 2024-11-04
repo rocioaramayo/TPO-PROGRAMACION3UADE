@@ -39,8 +39,8 @@ public class Main {
         centroIdAIndice.clear();
 
         // Leer los archivos de entrada
-        leerClientesYCentros("C:\\Users\\Usuario\\Downloads\\clientesYCentros.txt");
-        leerRutas("C:\\Users\\Usuario\\Downloads\\rutas.txt");
+        leerClientesYCentros("C:\\Users\\Usuario\\Downloads\\clientesYCentros.txt");//modificar direccion
+        leerRutas("C:\\Users\\Usuario\\Downloads\\rutas.txt");//modificar direccion
 
         // Inicializar variables
         totalClientes = listaClientes.size();
