@@ -55,6 +55,10 @@ public class Main {
         cargarDatos(); // Cargamos datos desde los archivos
         backtracking(new ArrayList<>(), 0, 0); // Empezamos seleccion de centros con costo inicial en 0
         mostrarMejorCombinacion(); // Mostramos la mejor combinacion encontrada
+
+        // Imprimir las matrices de distancias y costos
+        imprimirMatrizDijkstra();
+        imprimirMatrizCostos();
     }
 
     // Cargamos datos de archivos
@@ -224,6 +228,60 @@ public class Main {
         public NodoDistancia(int id, double distancia) {
             this.id = id;
             this.distancia = distancia;
+        }
+    }
+
+    // Imprime la matriz de distancias de Dijkstra (Cliente -> Centro)
+    static void imprimirMatrizDijkstra() {
+        System.out.println("\n=== Matriz de Distancias (Clientes a Centros) ===");
+
+        // Imprimir encabezado
+        System.out.print("Cliente\\Centro\t");
+        for (CentroDistribucion centro : centros) {
+            System.out.print("C" + (centro.id - 50) + "\t");
+        }
+        System.out.println();
+
+        // Imprimir distancias
+        for (Cliente cliente : clientes) {
+            System.out.print("Cliente " + cliente.id + "\t\t");
+            for (CentroDistribucion centro : centros) {
+                double distancia = dijkstra(cliente.id, centro.id);
+                if (distancia == Double.MAX_VALUE) {
+                    System.out.print("INF\t");
+                } else {
+                    System.out.print(distancia + "\t");
+                }
+            }
+            System.out.println();
+        }
+    }
+
+    // Imprime la matriz de costos (Cliente -> Centro -> Puerto)
+    static void imprimirMatrizCostos() {
+        System.out.println("\n=== Matriz de Costos (Clientes a Centros a Puerto) ===");
+
+        // Imprimir encabezado
+        System.out.print("Cliente\\Centro\t");
+        for (CentroDistribucion centro : centros) {
+            System.out.print("C" + (centro.id - 50) + "\t");
+        }
+        System.out.println();
+
+        // Imprimir costos
+        for (Cliente cliente : clientes) {
+            System.out.print("Cliente " + cliente.id + "\t\t");
+            for (CentroDistribucion centro : centros) {
+                double distancia = dijkstra(cliente.id, centro.id);
+                if (distancia == Double.MAX_VALUE) {
+                    System.out.print("INF\t");
+                } else {
+                    double costoTotal = distancia * cliente.volumenProduccionAnual +
+                            centro.costoUnitarioAlPuerto * cliente.volumenProduccionAnual;
+                    System.out.print(costoTotal + "\t");
+                }
+            }
+            System.out.println();
         }
     }
 }
