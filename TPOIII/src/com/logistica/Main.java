@@ -48,9 +48,8 @@ public class Main {
     static Map<Integer, Nodo> grafo = new HashMap<>(); // Grafo con nodos
     static List<CentroDistribucion> centros = new ArrayList<>(); // Lista de centros
     static List<Cliente> clientes = new ArrayList<>(); // Lista de clientes
-    static double costoMinimoGlobal = Double.MAX_VALUE; // Mejor costo que encontramos
+    static double costoMinimoGlobal = Double.MAX_VALUE; // Mejor costo encontrado
     static List<Integer> mejorCombinacionCentros = new ArrayList<>(); // Mejor combinacion de centros
-    static int totalCentrosAConstruir = 3; // Cuantos centros vamos a construir
 
     public static void main(String[] args) throws IOException {
         cargarDatos(); // Cargamos datos desde los archivos
@@ -104,12 +103,13 @@ public class Main {
         br.close();
     }
 
-    // Backtracking para elegir centros optimos, con poda para ahorrar tiempo
+    // Backtracking para elegir centros optimos, sin limite de cantidad de centros
     static void backtracking(List<Integer> seleccionados, int inicio, double costoParcial) {
-        // Si el costo parcial ya supera el mejor costo encontrado, salimos (poda)
+        // Poda si el costo parcial ya supera el mejor costo encontrado
         if (costoParcial >= costoMinimoGlobal) return;
 
-        if (seleccionados.size() == totalCentrosAConstruir) {
+        // Cuando ya no hay más centros para seleccionar, evaluamos la combinación actual
+        if (inicio == centros.size()) {
             double costoActual = evaluarCombinacion(seleccionados); // Calcula el costo de esta combinacion
             System.out.println("Combinacion: " + seleccionados + " -> Costo: " + costoActual);
             if (costoActual < costoMinimoGlobal) {
@@ -119,6 +119,7 @@ public class Main {
             return;
         }
 
+        // Probar seleccionar el siguiente centro
         for (int i = inicio; i < centros.size(); i++) {
             int centroId = centros.get(i).id;
             double costoFijoCentro = centros.get(i).costoFijoAnual;
