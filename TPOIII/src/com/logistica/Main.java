@@ -54,14 +54,17 @@ public class Main {
     static Map<Integer, Nodo> grafo = new HashMap<>(); // Grafo con nodos (clientes y centros)
     static List<CentroDistribucion> centros = new ArrayList<>(); // Lista de centros de distribución
     static List<Cliente> clientes = new ArrayList<>(); // Lista de clientes
+    static double costoMinimoGlobal = Double.MAX_VALUE; // Costo mínimo encontrado
+    static List<Integer> mejorCombinacionCentros = new ArrayList<>(); // Mejor combinación de centros
+    static int totalCentrosAConstruir = 3; // Total de centros a construir
 
     public static void main(String[] args) throws IOException {
         cargarDatos(); // Cargar datos de archivos
-        imprimirMatrizDijkstra(); // Imprimir la matriz de caminos más cortos
-        imprimirMatrizCostos(); // Imprimir la matriz de costos de transporte
+        backtracking(new ArrayList<>(), 0); // Iniciar el proceso de selección de centros mediante backtracking
+        mostrarMejorCombinacion(); // Mostrar el resultado óptimo encontrado
     }
 
-    // Método para cargar los datos desde archivos
+    //  cargar los datos desde archivos
     static void cargarDatos() throws IOException {
         BufferedReader br = new BufferedReader(new FileReader("/Users/tomasbonomo/Downloads/clientesYCentros.txt"));
         int totalClientes = Integer.parseInt(br.readLine().split("\t")[0]);
@@ -77,7 +80,7 @@ public class Main {
             grafo.put(id + 50, new Nodo(id + 50));
         }
 
-        // Cargar información de los clientes
+        // Cargar info de los clientes
         for (int i = 0; i < totalClientes; i++) {
             String[] partes = br.readLine().split(",");
             int id = Integer.parseInt(partes[0]);
@@ -91,7 +94,7 @@ public class Main {
         br = new BufferedReader(new FileReader("/Users/tomasbonomo/Downloads/rutas.txt"));
         int totalRutas = Integer.parseInt(br.readLine().split("\t")[0]);
 
-        // Cargar información de las rutas entre los nodos
+        // Cargar info de las rutas entre los nodos
         for (int i = 0; i < totalRutas; i++) {
             String[] partes = br.readLine().split(",");
             int origen = Integer.parseInt(partes[0]);
@@ -107,65 +110,81 @@ public class Main {
         br.close();
     }
 
-    // Método para imprimir la matriz de distancias mínimas entre clientes y centros
-    public static void imprimirMatrizDijkstra() {
-        System.out.println("\n=== Matriz de Caminos Más Cortos (Clientes a Centros de Distribución) ===");
-
-        // Imprimir encabezado de centros
-        System.out.print("Cliente\\Centro\t");
-        for (CentroDistribucion centro : centros) {
-            System.out.print("C" + (centro.id - 50) + "\t");
-        }
-        System.out.println();
-
-        // Calcular y mostrar distancias desde cada cliente a cada centro
-        for (Cliente cliente : clientes) {
-            System.out.print("Cliente " + cliente.id + "\t\t");
-            for (CentroDistribucion centro : centros) {
-                double distanciaMinima = dijkstra(cliente.id, centro.id);
-                if (distanciaMinima == Double.MAX_VALUE) {
-                    System.out.print("INF\t");  // Imprimir INF si no hay ruta
-                } else {
-                    System.out.print(distanciaMinima + "\t");  // Imprimir la distancia calculada
-                }
+    // Backtracking para seleccionar los centros optimos
+    static void backtracking(List<Integer> seleccionados, int inicio) {
+        if (seleccionados.size() == totalCentrosAConstruir) {
+            double costoActual = evaluarCombinacion(seleccionados); // EvalUar la combinacion actual de centros
+            System.out.println("Combinación: " + seleccionados + " -> Costo: " + costoActual);
+            if (costoActual < costoMinimoGlobal) {
+                costoMinimoGlobal = costoActual;
+                mejorCombinacionCentros = new ArrayList<>(seleccionados);
             }
-            System.out.println();
+            return;
+        }
+
+        for (int i = inicio; i < centros.size(); i++) {
+            seleccionados.add(centros.get(i).id);
+            backtracking(seleccionados, i + 1); // Recursión para probar la siguiente combinación
+            seleccionados.remove(seleccionados.size() - 1); // Retroceder para probar otra combinación
         }
     }
 
-    // Método para imprimir la matriz de costos de transporte entre clientes y centros
-    public static void imprimirMatrizCostos() {
-        System.out.println("\n=== Matriz de Costos Totales de Transporte (Clientes a Centros a Puerto) ===");
+    // Evaluar el costo total de una combinación de centros seleccionados
+    static double evaluarCombinacion(List<Integer> centrosSeleccionados) {
+        double costoTotal = 0;
+        Map<Integer, Double> volumenPorCentro = new HashMap<>();
 
-        // Imprimir encabezado de centros
-        System.out.print("Cliente          \t");
-        for (CentroDistribucion centro : centros) {
-            System.out.print("C" + (centro.id - 50) + "\t");
+        // Inicializar volumen por centro
+        for (int idCentro : centrosSeleccionados) {
+            volumenPorCentro.put(idCentro, 0.0);
         }
-        System.out.println();
 
-        // Calcular y mostrar costos de transporte desde cada cliente a cada centro, incluyendo el costo al puerto
+        // Calcular costos de transporte cliente-centro y centro-puerto
         for (Cliente cliente : clientes) {
-            System.out.print("Cliente " + cliente.id + "\t\t");
-            for (CentroDistribucion centro : centros) {
-                double distanciaMinima = dijkstra(cliente.id, centro.id);
-                if (distanciaMinima == Double.MAX_VALUE) {
-                    System.out.print("INF\t");  // Imprimir INF si no hay ruta
-                } else {
-                    // Calcular el costo de transporte al centro
-                    double costoTransporteCentro = distanciaMinima * cliente.volumenProduccionAnual;
-                    
-                    // Calcular el costo adicional desde el centro al puerto
-                    double costoTransportePuerto = centro.costoUnitarioAlPuerto * cliente.volumenProduccionAnual;
+            double costoMinimoCliente = Double.MAX_VALUE;
+            for (int idCentro : centrosSeleccionados) {
+                double distanciaClienteCentro = dijkstra(cliente.id, idCentro);
+                if (distanciaClienteCentro != Double.MAX_VALUE) {
+                    // Costo de transporte del cliente al centro
+                    double costoClienteCentro = distanciaClienteCentro * cliente.volumenProduccionAnual;
+                    // Costo adicional del centro al puerto
+                    CentroDistribucion centro = obtenerCentroPorId(idCentro);
+                    double costoCentroPuerto = centro.costoUnitarioAlPuerto * cliente.volumenProduccionAnual;
+                    double costoTotalCliente = costoClienteCentro + costoCentroPuerto;
 
-                    // Costo total del cliente al centro y luego al puerto
-                    double costoTotal = costoTransporteCentro + costoTransportePuerto;
-
-                    System.out.print(costoTotal + "\t");  // Imprimir el costo total de transporte
+                    if (costoTotalCliente < costoMinimoCliente) {
+                        costoMinimoCliente = costoTotalCliente;
+                        volumenPorCentro.put(idCentro, volumenPorCentro.get(idCentro) + cliente.volumenProduccionAnual);
+                    }
                 }
             }
-            System.out.println();
+            costoTotal += costoMinimoCliente;
         }
+
+        // Añadir costos fijos de cada centro
+        for (int idCentro : centrosSeleccionados) {
+            CentroDistribucion centro = obtenerCentroPorId(idCentro);
+            costoTotal += centro.costoFijoAnual;
+        }
+
+        return costoTotal;
+    }
+
+    // Obtener un centro de distribución por su ID
+    static CentroDistribucion obtenerCentroPorId(int id) {
+        for (CentroDistribucion centro : centros) {
+            if (centro.id == id) {
+                return centro;
+            }
+        }
+        return null;
+    }
+
+    // Mostrar la mejor combinación de centros encontrada
+    static void mostrarMejorCombinacion() {
+        System.out.println("\n=== Mejor Combinación Encontrada ===");
+        System.out.println("Costo mínimo total: " + costoMinimoGlobal);
+        System.out.println("Centros de distribución seleccionados: " + mejorCombinacionCentros);
     }
 
     // Algoritmo de Dijkstra para encontrar el costo mínimo entre dos nodos
@@ -208,7 +227,6 @@ public class Main {
             this.distancia = distancia;
         }
     }
-    
-    
- 
 }
+
+
