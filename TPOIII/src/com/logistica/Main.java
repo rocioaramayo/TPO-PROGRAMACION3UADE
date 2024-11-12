@@ -103,9 +103,9 @@ public class Main {
         br.close();
     }
 
-    // Backtracking para elegir centros optimos, sin limite de cantidad de centros
+    // Backtracking para elegir centros optimos, con poda para ahorrar tiempo
     static void backtracking(List<Integer> seleccionados, int inicio, double costoParcial) {
-        // Poda si el costo parcial ya supera el mejor costo encontrado
+        // Si el costo parcial ya supera el mejor costo encontrado, salimos (poda)
         if (costoParcial >= costoMinimoGlobal) return;
 
         // Cuando ya no hay más centros para seleccionar, evaluamos la combinación actual
@@ -141,7 +141,7 @@ public class Main {
             for (int idCentro : centrosSeleccionados) {
                 double distanciaClienteCentro = dijkstra(cliente.id, idCentro);
                 if (distanciaClienteCentro != Double.MAX_VALUE) {
-                    // Costo transporte cliente-centro
+                    // Cálculo de costos si se encuentra una distancia válida
                     double costoClienteCentro = distanciaClienteCentro * cliente.volumenProduccionAnual;
                     // Costo extra centro-puerto
                     CentroDistribucion centro = obtenerCentroPorId(idCentro);
@@ -153,15 +153,21 @@ public class Main {
                     }
                 }
             }
+
+            // Si no encontramos un centro válido para el cliente, descartar esta combinación
+            if (costoMinimoCliente == Double.MAX_VALUE) {
+                return Double.MAX_VALUE;  // Si no hay ruta válida, esta combinación no es válida
+            }
+
             costoTotal += costoMinimoCliente;
 
-            // Poda si el costo total ya supera el mejor costo
+            // Poda: si el costo total ya supera el costo mínimo encontrado, cortar búsqueda
             if (costoTotal >= costoMinimoGlobal) {
-                return Double.MAX_VALUE; // Salida rapida
+                return Double.MAX_VALUE;  // Salida temprana si el costo es mayor
             }
         }
 
-        // Agrega costo fijo de cada centro
+        // Agregar costo fijo de cada centro seleccionado
         for (int idCentro : centrosSeleccionados) {
             CentroDistribucion centro = obtenerCentroPorId(idCentro);
             costoTotal += centro.costoFijoAnual;
