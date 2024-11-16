@@ -246,7 +246,7 @@ public class Main {
     static void imprimirMatrizDijkstra() {
         System.out.println("\n=== Matriz de Distancias (Clientes a Centros) ===");
 
-        System.out.print("Cliente\\Centro\t");
+        System.out.print("Cliente          \t");
         for (CentroDistribucion centro : centros) {
             System.out.print("C" + (centro.id - 50) + "\t");
         }
@@ -269,7 +269,7 @@ public class Main {
     static void imprimirMatrizCostos() {
         System.out.println("\n=== Matriz de Costos (Clientes a Centros a Puerto) ===");
 
-        System.out.print("Cliente\\Centro\t");
+        System.out.print("Cliente            \t");
         for (CentroDistribucion centro : centros) {
             System.out.print("C" + (centro.id - 50) + "\t");
         }
