@@ -1,4 +1,5 @@
-package com.logistica;
+package tpotot;
+
 
 import java.io.*;
 import java.util.*;
@@ -32,6 +33,15 @@ public class Main {
             this.costoUnitarioAlPuerto = costoUnitarioAlPuerto;
             this.costoFijoAnual = costoFijoAnual;
         }
+
+        public double getCostoFijoAnual(){
+            return costoFijoAnual;
+        }
+        
+        public String toString() {
+            return Integer.toString(id);
+        }
+
     }
 
     // Cliente y su produccion anual
@@ -49,13 +59,15 @@ public class Main {
     static List<CentroDistribucion> centros = new ArrayList<>(); // Lista de centros
     static List<Cliente> clientes = new ArrayList<>(); // Lista de clientes
     static double costoMinimoGlobal = Double.MAX_VALUE; // Mejor costo encontrado
-    static List<Integer> mejorCombinacionCentros = new ArrayList<>(); // Mejor combinacion de centros
+    static List<CentroDistribucion> mejorCombinacionCentros = new ArrayList<>(); // Mejor combinacion de centros
+    static double[][] matrizCostos;
 
     public static void main(String[] args) throws IOException {
         cargarDatos(); // Cargamos datos desde los archivos
+        precomputarMatrizCostos();
         backtracking(new ArrayList<>(), 0, 0); // Empezamos seleccion de centros con costo inicial en 0
         mostrarMejorCombinacion(); // Mostramos la mejor combinacion encontrada
-
+        
         // Imprimir las matrices de distancias y costos
         imprimirMatrizDijkstra();
         imprimirMatrizCostos();
@@ -63,7 +75,7 @@ public class Main {
 
     // Cargamos datos de archivos
     static void cargarDatos() throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader("/Users/tomasbonomo/Downloads/clientesYCentros.txt"));
+        BufferedReader br =new BufferedReader(new FileReader("C:\\Users\\tomas\\eclipse-workspace\\tpotot\\clientesYCentros.txt"));
         int totalClientes = Integer.parseInt(br.readLine().split("\t")[0]);
         int totalCentros = Integer.parseInt(br.readLine().split("\t")[0]);
 
@@ -88,7 +100,7 @@ public class Main {
         br.close();
 
         // Cargamos las rutas
-        br = new BufferedReader(new FileReader("/Users/tomasbonomo/Downloads/rutas.txt"));
+        br =new BufferedReader(new FileReader("C:\\Users\\tomas\\eclipse-workspace\\tpotot\\rutas.txt"));
         int totalRutas = Integer.parseInt(br.readLine().split("\t")[0]);
 
         // Procesamos cada ruta entre nodos
@@ -108,8 +120,10 @@ public class Main {
     }
 
     // Backtracking para elegir centros optimos, con poda para ahorrar tiempo
-    static void backtracking(List<Integer> seleccionados, int inicio, double costoParcial) {
-        if (costoParcial >= costoMinimoGlobal) return;
+    static void backtracking(List<CentroDistribucion> seleccionados, int inicio, double costoParcial) {
+        if (costoParcial >= costoMinimoGlobal){
+             System.out.println("PODA"); 
+             return;}
 
         if (inicio == centros.size()) {
             double costoActual = evaluarCombinacion(seleccionados);
@@ -122,58 +136,57 @@ public class Main {
         }
 
         for (int i = inicio; i < centros.size(); i++) {
-            int centroId = centros.get(i).id;
             double costoFijoCentro = centros.get(i).costoFijoAnual;
-
-            seleccionados.add(centroId);
+            seleccionados.add(centros.get(i));
             backtracking(seleccionados, i + 1, costoParcial + costoFijoCentro);
             seleccionados.remove(seleccionados.size() - 1);
         }
     }
-
-    static double evaluarCombinacion(List<Integer> centrosSeleccionados) {
-        double costoTotal = 0;
-
-        for (Cliente cliente : clientes) {
-            double costoMinimoCliente = Double.MAX_VALUE;
-            for (int idCentro : centrosSeleccionados) {
-                double distanciaClienteCentro = dijkstra(cliente.id, idCentro);
-                if (distanciaClienteCentro != Double.MAX_VALUE) {
-                    double costoClienteCentro = distanciaClienteCentro * cliente.volumenProduccionAnual;
-                    CentroDistribucion centro = obtenerCentroPorId(idCentro);
-                    double costoCentroPuerto = centro.costoUnitarioAlPuerto * cliente.volumenProduccionAnual;
-                    double costoTotalCliente = costoClienteCentro + costoCentroPuerto;
-
-                    if (costoTotalCliente < costoMinimoCliente) {
-                        costoMinimoCliente = costoTotalCliente;
-                    }
-                }
-            }
-
-            if (costoMinimoCliente == Double.MAX_VALUE) {
-                return Double.MAX_VALUE;
-            }
-
-            costoTotal += costoMinimoCliente;
-
-            if (costoTotal >= costoMinimoGlobal) {
-                return Double.MAX_VALUE;
+    static void precomputarMatrizCostos() {
+        matrizCostos = new double[clientes.size()][centros.size()];
+        for (int i = 0; i < clientes.size(); i++) {
+            for (int j = 0; j < centros.size(); j++) {
+                matrizCostos[i][j] = dijkstra(clientes.get(i).id, centros.get(j).id);
             }
         }
-
-        for (int idCentro : centrosSeleccionados) {
-            CentroDistribucion centro = obtenerCentroPorId(idCentro);
-            costoTotal += centro.costoFijoAnual;
-        }
-
-        return costoTotal;
     }
 
-    static CentroDistribucion obtenerCentroPorId(int id) {
-        for (CentroDistribucion centro : centros) {
-            if (centro.id == id) return centro;
+    static double evaluarCombinacion(List<CentroDistribucion> centrosSeleccionados) {
+        double costoTotal = 0;
+    
+        for (Cliente cliente : clientes) {
+            double costoMinimoCliente = Double.MAX_VALUE;
+    
+            for (CentroDistribucion centro : centrosSeleccionados) {
+                int clienteIndex = clientes.indexOf(cliente);
+                int centroIndex = centros.indexOf(centro);
+    
+                double distanciaClienteCentro = matrizCostos[clienteIndex][centroIndex];
+                if (distanciaClienteCentro != Double.MAX_VALUE) {
+                    double costoClienteCentro = distanciaClienteCentro * cliente.volumenProduccionAnual;
+                    double costoCentroPuerto = centro.costoUnitarioAlPuerto * cliente.volumenProduccionAnual;
+                    double costoTotalCliente = costoClienteCentro + costoCentroPuerto;
+    
+                    costoMinimoCliente = Math.min(costoMinimoCliente, costoTotalCliente);
+                }
+            }
+    
+            if (costoMinimoCliente == Double.MAX_VALUE) {
+                return Double.MAX_VALUE; // Cliente no puede ser asignado
+            }
+    
+            costoTotal += costoMinimoCliente;
+    
+            if (costoTotal >= costoMinimoGlobal) {
+                return Double.MAX_VALUE; // Poda adicional
+            }
         }
-        return null;
+    
+        for (CentroDistribucion centro : centrosSeleccionados) {
+            costoTotal += centro.costoFijoAnual;
+        }
+    
+        return costoTotal;
     }
 
     static void mostrarMejorCombinacion() {
@@ -186,17 +199,16 @@ public class Main {
             int centroAsignado = -1;
             double costoMinimoCliente = Double.MAX_VALUE;
 
-            for (int idCentro : mejorCombinacionCentros) {
-                double distanciaClienteCentro = dijkstra(cliente.id, idCentro);
+            for (CentroDistribucion Centro : mejorCombinacionCentros) {
+                double distanciaClienteCentro = dijkstra(cliente.id, Centro.id);
                 if (distanciaClienteCentro != Double.MAX_VALUE) {
                     double costoClienteCentro = distanciaClienteCentro * cliente.volumenProduccionAnual;
-                    CentroDistribucion centro = obtenerCentroPorId(idCentro);
-                    double costoCentroPuerto = centro.costoUnitarioAlPuerto * cliente.volumenProduccionAnual;
+                    double costoCentroPuerto = Centro.costoUnitarioAlPuerto * cliente.volumenProduccionAnual;
                     double costoTotalCliente = costoClienteCentro + costoCentroPuerto;
 
                     if (costoTotalCliente < costoMinimoCliente) {
                         costoMinimoCliente = costoTotalCliente;
-                        centroAsignado = idCentro;
+                        centroAsignado = Centro.id;
                     }
                 }
             }
